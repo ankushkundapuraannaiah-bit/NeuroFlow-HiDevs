@@ -1,0 +1,8 @@
+☑️ Extraction filters: quality>=0.82, user_rating>=4/NULL, not included_in_job
+☑️ JSONL validation: PII regex, 50-2000 tokens, citations, faithfulness>0.8
+☑️ MLflow run created per job with params/artifact (localhost:5000)
+☑️ OpenAI fine-tuning job submitted + ARQ polling every 60s
+☑️ Model auto-registered in ModelRouter on success (prefer_fine_tuned=True)
+☑️ GET /finetune/training-data/preview shows 5 samples (no job submission)
+☑️ All endpoints implemented with proper error handling
+☑️ FinetuneJob table tracks provider_job_id -> fine_tuned_model mapping
