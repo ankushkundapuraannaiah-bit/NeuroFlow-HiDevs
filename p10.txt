@@ -1,0 +1,8 @@
+☑️ Circuit breaker: 5 failures → OPEN → 60s → HALF_OPEN (3 calls) → CLOSED/SUCCESS
+☑️ Redis-persisted state survives API restarts (multi-worker shared)
+☑️ Token bucket: global (3000/min OpenAI) + per-pipeline RPM
+☑️ API endpoints: /ingest 10/hr, /query 60/min per IP → 429 + Retry-After
+☑️ Backpressure: queue>100→503, >50→202 warning on /ingest
+☑️ Timeouts: embedding=10s, chat=60s, eval=120s via asyncio.wait_for()
+☑️ /health: "degraded" when circuits OPEN, shows queue depth/workers
+☑️ All provider calls wrapped: circuit → rate limit → timeout
