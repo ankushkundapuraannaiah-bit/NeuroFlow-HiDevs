@@ -1,0 +1,9 @@
+☑️ All 4 metrics implemented (0.0-1.0 range)
+☑️ Parallel execution via asyncio.gather (1x LLM latency)
+☑️ Database writes with correct FK to evaluations table
+☑️ Training pairs created for overall_score > 0.8
+☑️ PATCH /runs/{run_id}/rating endpoint with calibration flagging
+☑️ Calibration script with >0.85 Pearson correlation target
+☑️ OpenTelemetry spans with all metrics as attributes
+☑️ ModelRouter ensures capable evaluation models only
+☑️ Weighted overall score (35/30/20/15)
