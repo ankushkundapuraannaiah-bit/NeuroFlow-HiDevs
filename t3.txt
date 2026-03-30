@@ -1,0 +1,208 @@
+'use client';
+import { useState } from 'react';
+import { usePipelines, useSubmitQuery, useSSEStream, useSubmitFeedback } from '@/lib/api';
+import { ChevronDown, ThumbsUp, ThumbsDown, Split } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import clsx from 'clsx';
+
+export default function Playground() {
+  const { data: pipelines } = usePipelines();
+  const submitQuery = useSubmitQuery();
+  const submitFeedback = useSubmitFeedback();
+  
+  const [query, setQuery] = useState('');
+  const [pipelineA, setPipelineA] = useState(pipelines?.[0]?.id);
+  const [pipelineB, setPipelineB] = useState(pipelines?.[1]?.id);
+  const [compareMode, setCompareMode] = useState(false);
+  const [runA, setRunA] = useState<any>(null);
+  const [runB, setRunB] = useState<any>(null);
+  const [showCitationDrawer, setShowCitationDrawer] = useState(false);
+  const [selectedChunk, setSelectedChunk] = useState<any>(null);
+
+  const handleSubmit = () => {
+    submitQuery.mutate({ pipelineId: pipelineA!, query });
+    if (compareMode) {
+      // Submit B in parallel
+      submitQuery.mutate({ pipelineId: pipelineB!, query });
+    }
+  };
+
+  const handleCitationClick = (chunk: any, runId: string) => {
+    setSelectedChunk(chunk);
+    setShowCitationDrawer(true);
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto p-8 space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          NeuroFlow Playground
+        </h1>
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <span className="text-sm font-medium">Compare Mode</span>
+          <Split className="w-5 h-5" />
+          <input
+            type="checkbox"
+            checked={compareMode}
+            onChange={(e) => setCompareMode(e.target.checked)}
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+          />
+        </label>
+      </div>
+
+      {/* Query Input */}
+      <div className="space-y-4">
+        <div className="flex space-x-4">
+          <select
+            value={pipelineA!}
+            onChange={(e) => setPipelineA(e.target.value)}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            {pipelines?.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.avg_score?.toFixed(2)})
+              </option>
+            ))}
+          </select>
+          {compareMode && (
+            <select
+              value={pipelineB!}
+              onChange={(e) => setPipelineB(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              {pipelines?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.avg_score?.toFixed(2)})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        
+        <textarea
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Enter your query here..."
+          className="w-full p-4 border border-gray-300 rounded-xl resize-vertical min-h-[120px] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          rows={4}
+        />
+        <div className="flex justify-between text-sm text-gray-500">
+          <span>{query.length}/2000 characters</span>
+          <button
+            onClick={handleSubmit}
+            disabled={!query.trim() || submitQuery.isPending}
+            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+          >
+            {submitQuery.isPending ? 'Running...' : 'Run Query'}
+          </button>
+        </div>
+      </div>
+
+      {/* Response Panels */}
+      <div className={clsx('grid gap-8', compareMode ? 'grid-cols-2' : 'grid-cols-1')}>
+        {runA && (
+          <ResponsePanel
+            run={runA}
+            pipelineId={pipelineA!}
+            onCitationClick={handleCitationClick}
+            onFeedback={(rating) => submitFeedback.mutate({ runId: runA.id, rating })}
+          />
+        )}
+        {compareMode && runB && (
+          <ResponsePanel
+            run={runB}
+            pipelineId={pipelineB!}
+            onCitationClick={handleCitationClick}
+            onFeedback={(rating) => submitFeedback.mutate({ runId: runB.id, rating })}
+          />
+        )}
+      </div>
+
+      {/* Citation Drawer */}
+      <AnimatePresence>
+        {showCitationDrawer && (
+          <motion.div
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl border-l border-gray-200 z-50"
+          >
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="font-semibold text-lg">Source Chunk</h3>
+            </div>
+            <div className="p-6 max-h-screen overflow-y-auto">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">{selectedChunk?.content}</p>
+              <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
+                <div>File: {selectedChunk?.metadata?.filename}</div>
+                <div>Chunk: {selectedChunk?.metadata?.chunk_id}</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCitationDrawer(false)}
+              className="w-full p-4 border-t border-gray-200 hover:bg-gray-50 text-sm font-medium text-gray-700"
+            >
+              Close
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ResponsePanel({ run, pipelineId, onCitationClick, onFeedback }: any) {
+  const { data: streamData } = useSSEStream(run.id);
+  
+  return (
+    <div className="space-y-4 border rounded-2xl p-8 bg-white shadow-sm border-gray-200">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+          <span className="font-semibold text-gray-900">Response</span>
+        </div>
+        <div className="flex space-x-2">
+          <ThumbsUp className="w-5 h-5 text-green-500 cursor-pointer hover:scale-110 transition-transform" onClick={() => onFeedback(5)} />
+          <ThumbsDown className="w-5 h-5 text-red-500 cursor-pointer hover:scale-110 transition-transform" onClick={() => onFeedback(1)} />
+        </div>
+      </div>
+      
+      {/* Retrieved Sources */}
+      <div className="space-y-2">
+        {run.chunks?.map((chunk: any, i: number) => (
+          <div key={i} className="p-3 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+            <div className="flex justify-between items-start mb-2">
+              <span className="font-medium text-sm text-gray-900">Source {i + 1}</span>
+              <span className="text-xs text-gray-500">{(chunk.score * 100).toFixed(1)}%</span>
+            </div>
+            <p className="text-sm text-gray-700 line-clamp-3">{chunk.content}</p>
+          </div>
+        ))}
+      </div>
+      
+      {/* Streaming Answer */}
+      <div className="min-h-[200px] p-4 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200">
+        <div className="whitespace-pre-wrap text-lg leading-relaxed">
+          {streamData?.content || 'Generating response...'}
+        </div>
+      </div>
+      
+      {/* Evaluation Scores */}
+      {streamData?.eval && (
+        <div className="grid grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+          {['faithfulness', 'answer_relevance', 'context_precision', 'context_recall'].map((metric) => (
+            <div key={metric} className="text-center">
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-1000"
+                  style={{ width: `${streamData.eval[metric] * 100}%` }}
+                />
+              </div>
+              <div className="text-xs font-medium text-gray-700">{metric.replace('_', ' ').toUpperCase()}</div>
+              <div className="text-2xl font-bold text-gray-900">{(streamData.eval[metric] * 100).toFixed(0)}%</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

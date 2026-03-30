@@ -1,0 +1,90 @@
+'use client';
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
+import { usePipelines, usePipelineRuns } from '@/lib/api';
+import { BarChart, RadarChart, LineChart } from 'recharts';
+import { Editor } from '@monaco-editor/react';
+import { motion } from 'framer-motion';
+
+const JsonEditor = dynamic(() => import('@/components/JsonEditor'), { ssr: false });
+
+export default function Pipelines() {
+  const { data: pipelines } = usePipelines();
+  const [selectedPipeline, setSelectedPipeline] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const { data: runs } = selectedPipeline ? usePipelineRuns(selectedPipeline) : { data: null };
+
+  return (
+    <div className="max-w-7xl mx-auto p-8 space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          Pipeline Manager
+        </h1>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all font-medium"
+        >
+          + New Pipeline
+        </button>
+      </div>
+
+      {/* Pipeline Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {pipelines?.map((pipeline) => {
+          const scoreColor = pipeline.avg_score > 0.8 ? 'from-emerald-500 to-emerald-600' :
+                           pipeline.avg_score > 0.6 ? 'from-amber-500 to-amber-600' : 'from-red-500 to-red-600';
+          
+          return (
+            <motion.div
+              key={pipeline.id}
+              whileHover={{ y: -4 }}
+              className="group bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-xl transition-all duration-300 overflow-hidden"
+              onClick={() => {
+                setSelectedPipeline(pipeline.id);
+                setDrawerOpen(true);
+              }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="font-bold text-xl text-gray-900 truncate">{pipeline.name}</h3>
+                <div className={`px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${scoreColor} text-white`}>
+                  {pipeline.avg_score?.toFixed(2)}
+                </div>
+              </div>
+              
+              <div className="space-y-2 text-sm text-gray-600 mb-6">
+                <div>Version: {pipeline.version}</div>
+                <div>Queries (7d): {pipeline.query_count_7d}</div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-24 h-4 bg-gray-200 rounded-full overflow-hidden">
+                    <div className={`h-4 bg-gradient-to-r ${scoreColor} transition-all`} style={{ width: `${pipeline.avg_score * 100}%` }} />
+                  </div>
+                  <span>{pipeline.avg_score?.toFixed(1)} avg</span>
+                </div>
+              </div>
+              
+              {/* Sparkline placeholder */}
+              <div className="h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg flex items-center justify-center group-hover:bg-blue-50 transition-colors">
+                <span className="text-xs text-gray-500">↑ Sparkline</span>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Create Pipeline Modal */}
+      <CreatePipelineModal open={showCreateModal} onClose={() => setShowCreateModal(false)} />
+
+      {/* Analytics Drawer */}
+      {selectedPipeline && runs && (
+        <AnalyticsDrawer
+          pipeline={pipelines?.find(p => p.id === selectedPipeline)}
+          runs={runs}
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
+    </div>
+  );
+}

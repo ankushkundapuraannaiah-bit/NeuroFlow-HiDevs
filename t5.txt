@@ -1,0 +1,30 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { EventSourcePolyfill } from 'event-source-polyfill';
+
+export default function Evaluations() {
+  const [evaluations, setEvaluations] = useState<any[]>([]);
+  const [filters, setFilters] = useState({ pipeline: '', minFaithfulness: 0 });
+
+  useEffect(() => {
+    const eventSource = new EventSourcePolyfill('/api/evaluations/stream', {
+      withCredentials: true,
+    });
+
+    eventSource.addEventListener('evaluation', (event: any) => {
+      const newEval = JSON.parse(event.data);
+      setEvaluations(prev => [newEval, ...prev.slice(0, 99)]); // Keep last 100
+    });
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  return (
+    <div className="max-w-4xl mx-auto p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900">Live Evaluations</h1>
+        <div className="flex space-x-4">
+          <input
+            placeholder="Filter pipeline
