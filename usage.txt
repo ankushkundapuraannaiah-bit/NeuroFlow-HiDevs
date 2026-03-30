@@ -1,0 +1,12 @@
+# Non-streaming
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is HNSW?", "stream": false}'
+
+# Streaming
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Explain transformers", "stream": true}' | jq -r '.run_id'
+
+# SSE stream
+curl -N http://localhost:8000/query/{run_id}/stream
