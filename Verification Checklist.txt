@@ -1,0 +1,5 @@
+☑️ PipelineConfig Pydantic model rejects unknown keys (strict validation)
+☑️ PATCH creates new versions, preserves history (version counter increments)
+☑️ POST /compare runs parallel via asyncio.gather (verified timing)
+☑️ GET /analytics computes p95 latency correctly (percentile_cont)
+☑️
