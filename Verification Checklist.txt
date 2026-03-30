@@ -1,0 +1,10 @@
+☑️ POST /auth/token → {"access_token", "scopes": ["query", "ingest", "admin"]}
+☑️ All endpoints 401 without Bearer token (except /health, /metrics)
+☑️ query-scope token → 403 on POST /pipelines (admin required)
+☑️ POST /ingest {"url": "http://192.168.1.1"} → 400 Invalid URL
+☑️ Query "ignore all previous instructions" → pattern match + LLM reject (400)
+☑️ Document with AWS key → [REDACTED] stored + log event
+☑️ bleach.clean() strips HTML from all text inputs
+☑️ File validation: .pdf must start with %PDF-, rejects renamed exes
+☑️ Security headers: X-Frame-Options=DENY, CSP=default-src 'self'
+☑️ X-Request-ID trace header on every response
